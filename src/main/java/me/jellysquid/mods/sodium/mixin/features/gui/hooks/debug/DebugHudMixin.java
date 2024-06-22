@@ -17,12 +17,11 @@ import java.util.ArrayList;
 
 @Mixin(DebugHud.class)
 public abstract class DebugHudMixin {
-
     @Redirect(method = "getRightText", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Lists;newArrayList([Ljava/lang/Object;)Ljava/util/ArrayList;", remap = false))
     private ArrayList<String> redirectRightTextEarly(Object[] elements) {
         ArrayList<String> strings = Lists.newArrayList((String[]) elements);
         strings.add("");
-        strings.add(String.format("%sSodium Renderer (%s)", getVersionColor(), SodiumClientMod.getVersion()));
+        strings.add("%sSodium Renderer (%s)".formatted(getVersionColor(), SodiumClientMod.getVersion()));
 
         var renderer = SodiumWorldRenderer.instanceNullable();
 
@@ -35,6 +34,7 @@ public abstract class DebugHudMixin {
 
             if (str.startsWith("Allocated:")) {
                 strings.add(i + 1, getNativeMemoryString());
+
                 break;
             }
         }
@@ -43,22 +43,24 @@ public abstract class DebugHudMixin {
     }
 
     @Unique
-    private static final Formatting versionColor = calculateVersionColor();
-
-    private static Formatting calculateVersionColor() {
+    private static Formatting getVersionColor() {
         String version = SodiumClientMod.getVersion();
+        Formatting color;
+
         if (version.contains("-local")) {
-            return Formatting.RED;
+            color = Formatting.RED;
         } else if (version.contains("-snapshot")) {
-            return Formatting.LIGHT_PURPLE;
+            color = Formatting.LIGHT_PURPLE;
         } else {
-            return Formatting.GREEN;
+            color = Formatting.GREEN;
         }
+
+        return color;
     }
 
     @Unique
     private static String getNativeMemoryString() {
-        return String.format("Off-Heap: +%dMB", MathUtil.toMib(getNativeMemoryUsage()));
+        return "Off-Heap: +" + MathUtil.toMib(getNativeMemoryUsage()) + "MB";
     }
 
     @Unique
