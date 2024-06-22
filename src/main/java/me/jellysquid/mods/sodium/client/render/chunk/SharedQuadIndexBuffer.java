@@ -64,13 +64,13 @@ public class SharedQuadIndexBuffer {
         );
 
         // Mapear o buffer
-        GlBuffer.GlBufferMapping mapped = commandList.mapBuffer(this.buffer, 0, bufferSize, mapFlags);
+        ByteBuffer mappedBuffer = commandList.mapBufferRange(this.buffer, 0, bufferSize, mapFlags);
 
         // Criar os dados do buffer de índice
-        this.indexType.createIndexBuffer(mapped.getMemoryBuffer(), primitiveCount);
+        this.indexType.createIndexBuffer(mappedBuffer, primitiveCount);
 
         // Desmapear o buffer
-        commandList.unmap(mapped);
+        commandList.unmapBuffer(this.buffer);
         
         this.maxPrimitives = primitiveCount;
     }
