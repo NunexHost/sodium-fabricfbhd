@@ -21,19 +21,9 @@ public class SharedQuadIndexBuffer {
 
     private int maxPrimitives;
 
-    private final ByteBuffer reusableByteBuffer;
-    private final ShortBuffer reusableShortBuffer;
-    private final IntBuffer reusableIntBuffer;
-
     public SharedQuadIndexBuffer(CommandList commandList, IndexType indexType) {
         this.buffer = commandList.createMutableBuffer();
         this.indexType = indexType;
-
-        // Inicializa buffers reutilizáveis
-        int maxBufferSize = Math.max(indexType.getMaxElementCount() * ELEMENTS_PER_PRIMITIVE * indexType.getBytesPerElement(), 16384);
-        this.reusableByteBuffer = ByteBuffer.allocateDirect(maxBufferSize);
-        this.reusableShortBuffer = this.reusableByteBuffer.asShortBuffer();
-        this.reusableIntBuffer = this.reusableByteBuffer.asIntBuffer();
     }
 
     public void ensureCapacity(CommandList commandList, int elementCount) {
@@ -53,27 +43,18 @@ public class SharedQuadIndexBuffer {
     }
 
     private void grow(CommandList commandList, int primitiveCount) {
-        int bufferSize = primitiveCount * this.indexType.getBytesPerElement() * ELEMENTS_PER_PRIMITIVE;
+        var bufferSize = primitiveCount * this.indexType.getBytesPerElement() * ELEMENTS_PER_PRIMITIVE;
 
         commandList.allocateStorage(this.buffer, bufferSize, GlBufferUsage.STATIC_DRAW);
 
-        EnumBitField<GlBufferMapFlags> mapFlags = EnumBitField.of(
-                GlBufferMapFlags.INVALIDATE_BUFFER,
-                GlBufferMapFlags.WRITE,
-                GlBufferMapFlags.UNSYNCHRONIZED
-        );
+        var mapped = commandList.mapBuffer(this.buffer, 0, bufferSize, EnumBitField.of(GlBufferMapFlags.INVALIDATE_BUFFER, GlBufferMapFlags.WRITE, GlBufferMapFlags.UNSYNCHRONIZED));
+        this.indexType.createIndexBuffer(mapped.getMemoryBuffer(), primitiveCount);
 
-        // Mapear o buffer
-        ByteBuffer mappedBuffer = commandList.mapBufferRange(this.buffer, 0, bufferSize, mapFlags);
+        commandList.unmap(mapped);
 
-        // Criar os dados do buffer de índice
-        this.indexType.createIndexBuffer(mappedBuffer, primitiveCount);
-
-        // Desmapear o buffer
-        commandList.unmapBuffer(this.buffer);
-        
         this.maxPrimitives = primitiveCount;
     }
+
 
     public GlBuffer getBufferObject() {
         return this.buffer;
@@ -96,19 +77,18 @@ public class SharedQuadIndexBuffer {
             @Override
             public void createIndexBuffer(ByteBuffer byteBuffer, int primitiveCount) {
                 ShortBuffer shortBuffer = byteBuffer.asShortBuffer();
-                int vertexOffset = 0;
 
                 for (int primitiveIndex = 0; primitiveIndex < primitiveCount; primitiveIndex++) {
                     int indexOffset = primitiveIndex * ELEMENTS_PER_PRIMITIVE;
+                    int vertexOffset = primitiveIndex * VERTICES_PER_PRIMITIVE;
 
                     shortBuffer.put(indexOffset + 0, (short) (vertexOffset + 0));
                     shortBuffer.put(indexOffset + 1, (short) (vertexOffset + 1));
                     shortBuffer.put(indexOffset + 2, (short) (vertexOffset + 2));
+
                     shortBuffer.put(indexOffset + 3, (short) (vertexOffset + 2));
                     shortBuffer.put(indexOffset + 4, (short) (vertexOffset + 3));
                     shortBuffer.put(indexOffset + 5, (short) (vertexOffset + 0));
-
-                    vertexOffset += VERTICES_PER_PRIMITIVE;
                 }
             }
         },
@@ -116,22 +96,23 @@ public class SharedQuadIndexBuffer {
             @Override
             public void createIndexBuffer(ByteBuffer byteBuffer, int primitiveCount) {
                 IntBuffer intBuffer = byteBuffer.asIntBuffer();
-                int vertexOffset = 0;
 
                 for (int primitiveIndex = 0; primitiveIndex < primitiveCount; primitiveIndex++) {
                     int indexOffset = primitiveIndex * ELEMENTS_PER_PRIMITIVE;
+                    int vertexOffset = primitiveIndex * VERTICES_PER_PRIMITIVE;
 
                     intBuffer.put(indexOffset + 0, vertexOffset + 0);
                     intBuffer.put(indexOffset + 1, vertexOffset + 1);
                     intBuffer.put(indexOffset + 2, vertexOffset + 2);
+
                     intBuffer.put(indexOffset + 3, vertexOffset + 2);
                     intBuffer.put(indexOffset + 4, vertexOffset + 3);
                     intBuffer.put(indexOffset + 5, vertexOffset + 0);
-
-                    vertexOffset += VERTICES_PER_PRIMITIVE;
                 }
             }
         };
+
+        public static final IndexType[] VALUES = IndexType.values();
 
         private final GlIndexType format;
         private final int maxElementCount;
@@ -159,4 +140,4 @@ public class SharedQuadIndexBuffer {
             return this.maxElementCount;
         }
     }
-}
+                                           }
