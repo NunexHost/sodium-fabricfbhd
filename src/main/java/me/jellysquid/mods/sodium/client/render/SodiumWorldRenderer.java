@@ -124,7 +124,6 @@ public class SodiumWorldRenderer {
      * Notifies the chunk renderer that the graph scene has changed and should be re-computed.
      */
     public void scheduleTerrainUpdate() {
-        // BUG: seems to be called before init
         if (this.renderSectionManager != null) {
             this.renderSectionManager.markGraphDirty();
         }
@@ -267,8 +266,10 @@ public class SodiumWorldRenderer {
 
         BlockEntityRenderDispatcher blockEntityRenderer = MinecraftClient.getInstance().getBlockEntityRenderDispatcher();
 
-        this.renderBlockEntities(matrices, bufferBuilders, blockBreakingProgressions, tickDelta, immediate, x, y, z, blockEntityRenderer);
-        this.renderGlobalBlockEntities(matrices, bufferBuilders, blockBreakingProgressions, tickDelta, immediate, x, y, z, blockEntityRenderer);
+        MatrixStack.Entry entry = matrices.peek(); // Cache the top matrix stack entry
+
+        this.renderBlockEntities(matrices, bufferBuilders, blockBreakingProgressions, tickDelta, immediate, x, y, z, blockEntityRenderer, entry);
+        this.renderGlobalBlockEntities(matrices, bufferBuilders, blockBreakingProgressions, tickDelta, immediate, x, y, z, blockEntityRenderer, entry);
     }
 
     private void renderBlockEntities(MatrixStack matrices,
